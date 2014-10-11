@@ -30,7 +30,10 @@ class SampleListener(Leap.Listener):
         self.instrument = 0
 
         #Setting OSC
-        self.dest = "10.10.15.159", 7777
+        #Rob's IP
+        self.dest = "10.10.15.158", 57120
+        #Cedric's IP
+        #self.dest = "10.10.15.159", 7777
         self.c = OSC.OSCClient()
         self.c.connect(self.dest)
         
@@ -45,8 +48,6 @@ class SampleListener(Leap.Listener):
         for gesture in gestures:
             if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SWIPE and gesture.state == Leap.Gesture.STATE_STOP:
                 self.enabled = not self.enabled
-                print "Welcome !"
-                print "Please select your instrument by pointing one on the grid."
                 return
             #Instrument selection    
             if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SCREEN_TAP and gesture.state == Leap.Gesture.STATE_STOP:
@@ -75,6 +76,7 @@ class SampleListener(Leap.Listener):
                     self.hp_pos = hand.palm_position
         
         volume = min(100, max(0, (self.rp_pos.y - 40)/3.6))
+        print volume
         self.msg = OSC.OSCMessage()
         self.msg.setAddress("/volume")
         self.msg.append(volume)
