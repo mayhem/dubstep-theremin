@@ -1,14 +1,19 @@
 #!/usr/bin/env python
 
-import OSC
+import socket
+from time import sleep
 
-dest = '127.0.0.1', 7777
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(("10.10.15.158", 8888))
 
-c = OSC.OSCClient()
-c.connect(dest)
+steps = list(range(-20, 22, 2))
+bsteps = list(range(-20, 22, 2))
+bsteps.reverse()
 
-# single message
-msg = OSC.OSCMessage()
-msg.setAddress("/volume") 
-msg.append(50)
-c.send(msg)
+while True:
+    for i in steps:
+       s.send("speed0 %.8f;" % (i / 10.0))
+       sleep(.5)
+    for i in bsteps:
+       s.send("speed0 %.8f;" % (i / 10.0))
+       sleep(.5)
