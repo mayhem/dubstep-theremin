@@ -1,0 +1,57 @@
+#N canvas 167 77 882 698 10;
+#X floatatom 494 251 14 0 0 0 - - -;
+#X obj 329 237 expr 44100 / $f1;
+#X floatatom 224 272 12 0 0 0 - - -;
+#X obj 330 340 phasor~;
+#X obj 332 414 *~;
+#X floatatom 138 372 5 0 0 0 - - -;
+#X obj 329 150 soundfiler -maxsize 8e+06;
+#X obj 138 304 expr $f1 * $f2;
+#X obj 343 -43 inlet;
+#X obj 257 582 outlet~;
+#X obj 139 243 inlet;
+#X obj 398 581 outlet~;
+#X obj 58 290 print;
+#X obj 238 -20 print;
+#X obj 472 -46 loadbang;
+#X obj 473 -13 f \$0;
+#X floatatom 474 34 5 0 0 0 - - -;
+#X obj 396 518 tabread4~ \$0-channelL;
+#X obj 256 517 tabread4~ \$0-channelR;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array \$0-channelL 100 float 3;
+#A 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0;
+#X coords 0 1 99 -1 200 140 1;
+#X restore 641 46 graph;
+#N canvas 0 22 450 278 (subpatch) 0;
+#X array \$0-channelR 100 float 3;
+#A 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+0;
+#X coords 0 1 99 -1 200 140 1;
+#X restore 640 216 graph;
+#X msg 328 115 read -resize \$1 $-channelL \$0-channelR;
+#X connect 0 0 4 1;
+#X connect 1 0 2 0;
+#X connect 1 0 3 0;
+#X connect 2 0 7 1;
+#X connect 3 0 4 0;
+#X connect 4 0 17 0;
+#X connect 4 0 18 0;
+#X connect 6 0 0 0;
+#X connect 6 0 1 0;
+#X connect 7 0 5 0;
+#X connect 7 0 3 0;
+#X connect 8 0 13 0;
+#X connect 8 0 21 0;
+#X connect 10 0 7 0;
+#X connect 10 0 12 0;
+#X connect 14 0 15 0;
+#X connect 15 0 16 0;
+#X connect 17 0 11 0;
+#X connect 18 0 9 0;
+#X connect 21 0 6 0;
