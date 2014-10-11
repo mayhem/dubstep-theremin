@@ -21,7 +21,10 @@ class SampleListener(Leap.Listener):
 
         #DJing names
         self.volume = 0
-        self.speed0 = 1
+        self.speed1 = 1
+        self.speed2 = 1
+        self.vol_track1 = 100
+        self.vol_track2 = 0
 
         #Defining the track selection grid
         self.CONST_GRID_COL_NUMBER = 3
@@ -34,7 +37,10 @@ class SampleListener(Leap.Listener):
         self.track1_selected = False
         self.track2_selected = False
         self.selected_track = 1
-        self.track_selectionmode_enabled = False
+        self.track_selectionmode_enabled = True
+
+        #DebugMode
+        self.DebugMode = True
         
 
         #Setting OSC
@@ -43,7 +49,7 @@ class SampleListener(Leap.Listener):
         #Cedric's IP
         #self.dest = "10.10.15.159"
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((self.dest, 8888))
+        #self.s.connect((self.dest, 8888))
         
 
 
@@ -53,7 +59,7 @@ class SampleListener(Leap.Listener):
 
 
 
-    def select_track1(self, st_position):
+    def select_track(self, st_position):
         track_selection_x = 0
         track_selection_y = 0
         track_x = 0
@@ -63,33 +69,8 @@ class SampleListener(Leap.Listener):
         track_selection_y = min(100, max(0,(st_position.y - 40)/3.6 ))
         track_x = floor(track_selection_x / (100 / self.CONST_GRID_COL_NUMBER)) 
         track_y = floor(track_selection_y / (100 / self.CONST_GRID_LINE_NUMBER)) 
-        self.track1 = track_x + (track_y * self.CONST_GRID_COL_NUMBER)
-        self.track1_selected = True
-
-        print "track 1 selected :" + str(self.track1)
-        print ""
-        print" --------------------------------------"
-        print "Please select the 2nd track now"
-
-
-    def select_track2(self, st_position):
-        track_selection_x = 0
-        track_selection_y = 0
-        track_x = 0
-        track_y = 0
-
-        track_selection_x = min(100, max(0,(st_position.x + 150)/3.5 ))
-        track_selection_y = min(100, max(0,(st_position.y - 40)/3.6 ))
-        track_x = floor(track_selection_x / (100 / self.CONST_GRID_COL_NUMBER)) 
-        track_y = floor(track_selection_y / (100 / self.CONST_GRID_LINE_NUMBER)) 
-        self.track2 = track_x + (track_y * self.CONST_GRID_COL_NUMBER)
-        self.track2_selected = True
-
-        self.track_selectionmode_enabled = False
-    
-        print "track 2 selected :" + str(self.track2)
-        print ""
-        print" --------------------------------------"
+        return track_x + (track_y * self.CONST_GRID_COL_NUMBER)
+        
 
 
     def on_frame(self, controller):
@@ -112,6 +93,8 @@ class SampleListener(Leap.Listener):
                 print "Control speed              => use your left hand open over the controller, go forward & backward"
                 print "desactivate                => swipe again"
                 print "--------------------------------------"
+                if not self.DebugMode:
+                    self.s.send("Start;")
                 return
 
             #if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SWIPE and gesture.state == Leap.Gesture.STATE_STOP and self.enabled:
@@ -120,7 +103,7 @@ class SampleListener(Leap.Listener):
              #   return
 
             #Track selection entering    
-            if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_CIRCLE and gesture.state == Leap.Gesture.STATE_STOP and self.enabled and not self.track_selectionmode_enabled:
+            if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_CIRCLE and gesture.state == Leap.Gesture.STATE_STOP and self.enabled:
                 self.track1_selected = False
                 self.track2_selected = False
                 self.track_selectionmode_enabled = True
@@ -129,12 +112,22 @@ class SampleListener(Leap.Listener):
 
             #Track1 selection
             if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SCREEN_TAP and gesture.state == Leap.Gesture.STATE_STOP and self.enabled and self.track_selectionmode_enabled and not self.track1_selected:
-                self.select_track1(Leap.ScreenTapGesture(gesture).position)
+                self.track1 = self.select_track(Leap.ScreenTapGesture(gesture).position)
+                self.track1_selected = True
+                print "track 1 selected :" + str(self.track1)
+                print ""
+                print "--------------------------------------"
+                print "Please select the 2nd track now"
                 return
         
             #Track2 selection
             if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SCREEN_TAP and gesture.state == Leap.Gesture.STATE_STOP and self.enabled and self.track_selectionmode_enabled and self.track1_selected and not self.track2_selected:
-                self.select_track2(Leap.ScreenTapGesture(gesture).position)
+                self.track2 = self.select_track(Leap.ScreenTapGesture(gesture).position)
+                self.track2_selected = True
+                self.track_selectionmode_enabled = False
+                print "track 2 selected :" + str(self.track2)
+                print ""
+                print "--------------------------------------"
                 return
             '''
             #Switching from a track to the other
@@ -155,25 +148,57 @@ class SampleListener(Leap.Listener):
 
         handlist = frame.hands
         for hand in handlist:
-            if hand.is_valid:
+            if hand.is_valid and not self.track_selectionmode_enabled:
                 if hand.is_right:
                     self.rp_normal = hand.palm_normal
                     self.rp_pos = hand.palm_position
-                    #Volume setting
-                    self.volume = min(100, max(0, (self.rp_pos.y - 40)/3.6))
-                    #print "volume: " + str(self.volume)
-                    self.s.send("volume " + str(self.volume) + ";")
+                    #print self.rp_normal
+                    
+                    #Master Volume setting
+                    if self.rp_normal.z < -0.8:
+                        self.volume = min(100, max(0, (self.rp_pos.y - 40)/3.6))
+                        if not self.DebugMode:
+                            self.s.send("volume " + str(self.volume) + ";")
+                        else:
+                            print "volume: " + str(self.volume)
+                        
+
+                    #Tracks volume relative settings
+                    if self.rp_normal.x < -0.8:
+                        self.vol_track1 = min(100, max(0, (self.rp_pos.x + 200)/4))
+                        self.vol_track2 = 100 - self.vol_track1
+                        if not self.DebugMode:
+                            self.s.send("volume_track1 " + str(self.volume) + ";")
+                            self.s.send("volume_track2 " + str(self.volume) + ";")
+                        else:
+                            print "vol_track1 " + str(self.vol_track1)
+                            print "vol_track2 " + str(self.vol_track2)
+
+                    # track 1 speed setting
+                    if self.rp_normal.y < -0.8:
+                        self.speed1 = min(2, max(-2, (self.rp_pos.z * (-1) + 120)/40 - 2))
+                        if not self.DebugMode:
+                            self.s.send("speed1 " + str(self.speed1) + ";")
+                        else:
+                            print "speed1: " + str(self.speed1)
+                        
+
 
                 if hand.is_left:
                     self.lp_normal = hand.palm_normal
                     self.lp_pos = hand.palm_position
-                    #Speed setting
-                    self.speed0 = min(2, max(-2, (self.lp_pos.z * (-1) + 120)/40 - 2))
-                    #print "speed0: " + str(self.speed0)
-                    self.s.send("speed0 " + str(self.speed0) + ";")
+
+                    # track 2 speed setting
+                    if self.lp_normal.y < -0.8:
+                        self.speed2 = min(2, max(-2, (self.lp_pos.z * (-1) + 120)/40 - 2))
+                        if not self.DebugMode:
+                            self.s.send("speed2 " + str(self.speed2) + ";")
+                        else:
+                            print "speed2: " + str(self.speed2)
+                        
         
+
         self.lastFrameID = frame.id
-        
 
 
         if not self.enabled:
