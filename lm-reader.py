@@ -6,7 +6,7 @@ arch_dir = 'lib'
 sys.path.insert(0, os.path.abspath(os.path.join(src_dir, arch_dir)))
 import Leap
 from Leap import CircleGesture, KeyTapGesture, ScreenTapGesture, SwipeGesture
-from math import floor
+from math import floor, fabs
 from time import sleep
 
 class SampleListener(Leap.Listener):
@@ -17,6 +17,12 @@ class SampleListener(Leap.Listener):
         self.lp_normal = None
         self.rp_pos = None
         self.lp_pos = None
+        self.rp_pinch = None
+        self.lp_pinch = None
+        self.rp_velocity = None
+        self.lp_velocity = None
+        self.rp_grab = None
+        self.lp_grab = None
         self.lastFrameID = 0
 
         #DJing names
@@ -24,6 +30,7 @@ class SampleListener(Leap.Listener):
         self.speed0 = 1
         self.speed1 = 1
         self.cross_fade = 100
+        self.reverb = 0
         #self.vol_track0 = 100
         #self.vol_track1 = 0
 
@@ -55,7 +62,7 @@ class SampleListener(Leap.Listener):
         #Cedric's IP
         #self.dest = "localhost"
         self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.s.connect((self.dest, 8888))
+        #self.s.connect((self.dest, 8888))
         
 
 
@@ -95,14 +102,18 @@ class SampleListener(Leap.Listener):
                 print ""
                 print "--------------------------------------"
                 print "Enter track selection mode => make a circle with a finger"
-                print "Control volume             => use your right hand open over the controller, go up & down"
-                print "Control speed              => use your left hand open over the controller, go forward & backward"
+                print "Control volume             => use your right hand open in front of you, go up & down"
+                print "Control speed              => use your hands open over the controller, go forward & backward"
+                print "Control the crossfader     => Move between left and right with your open hand"
+                print "Play/Pause current track   => Key tap over the controller"
+                print "Change current track       => Screen tap over the controller"
                 print "desactivate                => swipe again"
                 print "--------------------------------------"
                 if not self.DebugMode:
                     self.s.send("Start;")
                     print "Start"
                 return
+            
             '''
             if gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SWIPE and gesture.state == Leap.Gesture.STATE_STOP and self.enabled:
                 self.enabled = False
@@ -113,6 +124,7 @@ class SampleListener(Leap.Listener):
                 return
             '''
 
+            '''
             #Track selection entering    
             if (gesture.is_valid and gesture.type == Leap.Gesture.TYPE_CIRCLE and gesture.state == Leap.Gesture.STATE_STOP and self.enabled 
                 and not self.track_selectionmode_enabled):
@@ -144,8 +156,9 @@ class SampleListener(Leap.Listener):
                 print ""
                 print "--------------------------------------"
                 return
+            '''
 
-            
+            '''
             #Switching from a track to the other
             if (gesture.is_valid and gesture.type == Leap.Gesture.TYPE_SCREEN_TAP and self.enabled and self.track0_selected and
                 self.track1_selected and not self.track_selectionmode_enabled):
@@ -159,7 +172,7 @@ class SampleListener(Leap.Listener):
                     return
 
             
-            #Do play/pause on the track
+            #Play/pause a track
             if (gesture.is_valid and gesture.type == Leap.Gesture.TYPE_KEY_TAP and self.enabled and self.track0_selected and
                 self.track1_selected and not self.track_selectionmode_enabled):
                 #Q : what do i do? Only send a message like Play/Pause, or do i send Play and Pause separately?
@@ -181,16 +194,29 @@ class SampleListener(Leap.Listener):
                     self.PlayModeTrack1 = not self.PlayModeTrack1
 
                 return
-            
+                '''
 
         handlist = frame.hands
         for hand in handlist:
-            if hand.is_valid and self.controlling_enabled:
+            if hand.is_valid and self.enabled:
                 if hand.is_right:
+
                     self.rp_normal = hand.palm_normal
                     self.rp_pos = hand.palm_position
+                    self.rp_pinch = hand.pinch_strength
+                    self.rp_velocity = hand.palm_velocity
+                    self.rp_grab = hand.grab_strength
+                    #print self.rp_pinch
                     #print self.rp_normal
                     
+                    #Master reverb
+                    if self.rp_pinch > 0.8:
+                        self.reverb = max(1, min(0, fabs(self.rp_normal.x) / 0.9 ))
+                        #print "reverb: " + str(self.reverb)
+                        if not self.DebugMode:
+                            self.s.send("effect1 " + str(self.reverb) + ";")
+                        
+
                     #Master Volume setting
                     if self.rp_normal.z < -0.8:
                         self.volume = min(100, max(0, (self.rp_pos.y - 40)/3.6))
@@ -201,7 +227,7 @@ class SampleListener(Leap.Listener):
                         
 
                     #Tracks volume relative settings
-                    if self.rp_normal.x < -0.8:
+                    if self.rp_normal.y > 0.8:
                         self.cross_fade = min(1, max(0, (self.rp_pos.x + 200)/400))
                         #self.vol_track0 = min(100, max(0, (self.rp_pos.x + 200)/4))
                         #self.vol_track1 = 100 - self.vol_track1
@@ -214,7 +240,11 @@ class SampleListener(Leap.Listener):
 
                     # track 1 speed setting
                     if self.rp_normal.y < -0.8:
-                        self.speed0 = min(2, max(-2, (self.rp_pos.z * (-1) + 120)/40 - 2))
+                        if self.rp_grab < 0.8:
+                            self.speed0 = min(2, max(-2, (self.rp_pos.z * (-1) + 120)/40 -2))
+                        else: 
+                            self.speed0 = min(1.2, max(0.8, (self.rp_pos.z * (-1) + 120)/400 + 0.8))
+                        
                         print "speed0: " + str(self.speed0)
                         if not self.DebugMode:
                             self.s.send("speed0 " + str(self.speed0) + ";")
@@ -223,10 +253,17 @@ class SampleListener(Leap.Listener):
                 if hand.is_left:
                     self.lp_normal = hand.palm_normal
                     self.lp_pos = hand.palm_position
+                    self.lp_pinch = hand.pinch_strength
+                    self.lp_velocity = hand.palm_velocity 
+                    self.lp_grab = hand.grab_strength
 
                     # track 2 speed setting
                     if self.lp_normal.y < -0.8:
-                        self.speed1 = min(2, max(-2, (self.lp_pos.z * (-1) + 120)/40 - 2))
+                        if self.lp_grab < 0.8:
+                            self.speed1 = min(2, max(-2, (self.lp_pos.z * (-1) + 120)/40 -2))
+                        else:
+                            self.speed1 = min(1.2, max(0.8, (self.lp_pos.z * (-1) + 120)/400 +0.8))
+
                         print "speed1: " + str(self.speed1)
                         if not self.DebugMode:
                             self.s.send("speed1 " + str(self.speed1) + ";")
