@@ -1,4 +1,4 @@
-dubstep-theremin
+Leap Scratch
 ================
 
-A dubstep theremin written in Python and PureData, using a Leap Motion controller
+A DJ scratching console written in Python and PureData, using a Leap Motion controller
