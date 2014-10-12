@@ -4,7 +4,7 @@ import socket
 from time import sleep
 
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect(("10.10.15.158", 8888))
+s.connect(("localhost", 8888))
 
 steps = list(range(-10, 22, 2))
 bsteps = list(range(-10, 22, 2))
